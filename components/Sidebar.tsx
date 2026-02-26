@@ -14,10 +14,12 @@ import {
   Bars3Icon,
   XMarkIcon,
   ClockIcon,
+  CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: HomeIcon },
+  { href: "/timetable", label: "Timetable", icon: CalendarDaysIcon },
   { href: "/focus", label: "Focus", icon: ClockIcon },
   { href: "/friends", label: "Friends", icon: UserGroupIcon },
   { href: "/profile", label: "Profile", icon: UserCircleIcon },

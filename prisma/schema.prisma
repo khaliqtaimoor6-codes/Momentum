@@ -64,6 +64,7 @@ model User {
   friendships1           Friendship[]    @relation("friendshipUser1")
   friendships2           Friendship[]    @relation("friendshipUser2")
   miniTasks              MiniTask[]
+  timetableEntries       TimetableEntry[]
 }
 
 model MiniTask {
@@ -156,4 +157,26 @@ model Friendship {
   user2 User @relation("friendshipUser2", fields: [user2Id], references: [id], onDelete: Cascade)
 
   @@unique([user1Id, user2Id])
+}
+
+enum Activity {
+  sleep
+  study
+  gym
+  skills
+  none
+}
+
+model TimetableEntry {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekStart DateTime // Monday 00:00 of that week
+  day       Int      // 0=Mon, 1=Tue, ... 6=Sun
+  hour      Int      // 0-23
+  activity  Activity @default(none)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, weekStart, day, hour])
+  @@index([userId, weekStart])
 }
