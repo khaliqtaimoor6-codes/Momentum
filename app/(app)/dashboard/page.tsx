@@ -8,6 +8,8 @@ import DashboardClient from "@/components/DashboardClient";
 import type { LeaderboardEntry } from "@/components/Leaderboard";
 import type { Task } from "@/components/TaskList";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Dashboard | Momentum",
 };

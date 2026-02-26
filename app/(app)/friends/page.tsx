@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import FriendsClient from "@/components/FriendsClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Friends | Momentum",
 };

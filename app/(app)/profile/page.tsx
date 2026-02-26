@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import { getCurrentWeekStartDate } from "@/lib/week";
 import ProfileClient from "@/components/ProfileClient";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Profile | Momentum",
 };

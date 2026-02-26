@@ -4,6 +4,8 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import FocusTimer, { type FocusTask } from "@/components/FocusTimer";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Focus | Momentum",
 };
