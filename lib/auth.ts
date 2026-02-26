@@ -64,19 +64,19 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/",
+    signIn: "/login",
   },
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
+        token.sub = user.id;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token.sub) {
-        session.user.id = token.sub;
-      }
+      const id = (token as any).id ?? token.sub;
+      if (id) session.user.id = id as string;
       return session;
     },
   },

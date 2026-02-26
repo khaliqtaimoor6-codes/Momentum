@@ -50,7 +50,7 @@ export default async function ProfilePage() {
       email={user.email}
       bio={user.bio}
       image={user.image}
-      createdAt={user.createdAt.toISOString()}
+      createdAt={(user.createdAt ?? new Date(0)).toISOString()}
       weeklyStats={weeklyStats ?? null}
       isOwnProfile={true}
     />
