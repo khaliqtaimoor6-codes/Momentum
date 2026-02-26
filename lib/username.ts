@@ -15,7 +15,10 @@ export async function generateUniqueUsername(
     .slice(0, 20) || "user";
 
   // Try base first
-  const taken = await prisma.user.findUnique({ where: { username: base } });
+  const taken = await prisma.user.findUnique({
+    where: { username: base },
+    select: { id: true },
+  });
   if (!taken) return base;
 
   // Append random 4-digit suffix until unique
@@ -25,6 +28,7 @@ export async function generateUniqueUsername(
     candidate = `${base}_${suffix}`;
     const conflict = await prisma.user.findUnique({
       where: { username: candidate },
+      select: { id: true },
     });
     if (!conflict) return candidate;
   }

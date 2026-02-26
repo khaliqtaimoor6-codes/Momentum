@@ -25,6 +25,7 @@ export async function POST(req: Request) {
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
+      select: { id: true },
     });
 
     if (existingUser) {
@@ -48,7 +49,10 @@ export async function POST(req: Request) {
           { status: 400 },
         );
       }
-      const conflict = await prisma.user.findUnique({ where: { username: slug } });
+      const conflict = await prisma.user.findUnique({
+        where: { username: slug },
+        select: { id: true },
+      });
       if (conflict) {
         return NextResponse.json(
           { error: "Username already taken" },
