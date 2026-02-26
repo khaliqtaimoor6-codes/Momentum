@@ -4,7 +4,6 @@ import prisma from "@/lib/prisma";
 export async function GET() {
   const hasDatabaseUrl = Boolean(process.env.DATABASE_URL);
   const hasNextAuthSecret = Boolean(process.env.NEXTAUTH_SECRET);
-  const hasJwtSecret = Boolean(process.env.JWT_SECRET);
   const nextAuthUrl = process.env.NEXTAUTH_URL ?? null;
   const vercelUrl = process.env.VERCEL_URL ?? null;
 
@@ -12,8 +11,6 @@ export async function GET() {
   let dbError: string | null = null;
 
   try {
-    // Simple query to validate connectivity.
-    // If Atlas IP whitelist blocks Vercel, this will throw.
     await prisma.user.count();
     dbOk = true;
   } catch (e) {
@@ -22,11 +19,10 @@ export async function GET() {
   }
 
   return NextResponse.json({
-    ok: hasDatabaseUrl && hasNextAuthSecret && hasJwtSecret && dbOk,
+    ok: hasDatabaseUrl && hasNextAuthSecret && dbOk,
     env: {
       hasDatabaseUrl,
       hasNextAuthSecret,
-      hasJwtSecret,
       nextAuthUrl,
       vercelUrl,
     },

@@ -1,6 +1,6 @@
-﻿"use client";
+"use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +9,6 @@ import {
   MagnifyingGlassIcon,
   PaperAirplaneIcon,
   CheckIcon,
-  UserCircleIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 
@@ -25,10 +24,13 @@ interface PendingRequest {
 }
 
 interface SearchResult {
+  id: string;
   name: string | null;
   username: string | null;
   image: string | null;
   bio: string | null;
+  isFriend: boolean;
+  isPending: boolean;
 }
 
 interface FriendsClientProps {
@@ -61,61 +63,89 @@ export default function FriendsClient({
   friends,
   pendingRequests: initialPending,
 }: FriendsClientProps) {
-  // â”€â”€ Search state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Search state
   const [query, setQuery] = useState("");
-  const [searchResult, setSearchResult] = useState<SearchResult | null>(null);
+  const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState("");
   const [sentUsernames, setSentUsernames] = useState<Set<string>>(new Set());
-  const [sendLoading, setSendLoading] = useState(false);
+  const [sendLoadingId, setSendLoadingId] = useState<string | null>(null);
   const [sendMsg, setSendMsg] = useState<{ text: string; ok: boolean } | null>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // â”€â”€ Pending requests (client-side for accept optimistic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Pending requests (client-side for optimistic accept)
   const [pending, setPending] = useState<PendingRequest[]>(initialPending);
   const [acceptLoading, setAcceptLoading] = useState<string | null>(null);
 
   const [, startTransition] = useTransition();
   const router = useRouter();
 
-  // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const handleSearch = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const q = query.trim();
-    if (q.length < 2) { setSearchError("Enter at least 2 characters"); return; }
+  // Live autocomplete search with debounce
+  const fetchSuggestions = useCallback(async (q: string) => {
+    if (q.length < 1) {
+      setSuggestions([]);
+      setShowDropdown(false);
+      return;
+    }
 
-    setSearchError("");
-    setSearchResult(null);
-    setSendMsg(null);
     setSearchLoading(true);
-
     try {
       const res = await fetch(`/api/users/search?query=${encodeURIComponent(q)}`);
       const data = await res.json();
-      if (!res.ok) { setSearchError(data.error ?? "Search failed"); return; }
-
-      const users: SearchResult[] = data.users;
-      if (users.length === 0) {
-        setSearchError("No user found with that username or email.");
+      if (res.ok && data.users) {
+        setSuggestions(data.users);
+        setShowDropdown(data.users.length > 0);
       } else {
-        setSearchResult(users[0]); // show the top match
+        setSuggestions([]);
+        setShowDropdown(false);
       }
     } catch {
-      setSearchError("Something went wrong");
+      setSuggestions([]);
+      setShowDropdown(false);
     } finally {
       setSearchLoading(false);
     }
+  }, []);
+
+  const handleInputChange = (value: string) => {
+    setQuery(value);
+    setSendMsg(null);
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      fetchSuggestions(value.trim());
+    }, 300);
   };
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node) &&
+        inputRef.current &&
+        !inputRef.current.contains(e.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const clearSearch = () => {
     setQuery("");
-    setSearchResult(null);
-    setSearchError("");
+    setSuggestions([]);
+    setShowDropdown(false);
     setSendMsg(null);
   };
 
-  // â”€â”€ Send request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  const handleSend = async (targetQuery: string) => {
-    setSendLoading(true);
+  // Send friend request
+  const handleSend = async (user: SearchResult) => {
+    const targetQuery = user.username ?? user.name ?? "";
+    setSendLoadingId(user.id);
     setSendMsg(null);
 
     try {
@@ -129,21 +159,23 @@ export default function FriendsClient({
       if (!res.ok) {
         setSendMsg({ text: data.error ?? "Failed to send", ok: false });
       } else {
-        setSendMsg({ text: `Request sent to ${data.to}! ðŸŽ‰`, ok: true });
-        setSentUsernames((prev) => new Set(prev).add(targetQuery.toLowerCase()));
+        setSendMsg({ text: `Request sent to ${data.to}!`, ok: true });
+        setSentUsernames((prev) => new Set(prev).add(user.id));
+        // Update the suggestion to show pending status
+        setSuggestions((prev) =>
+          prev.map((s) => (s.id === user.id ? { ...s, isPending: true } : s))
+        );
       }
     } catch {
       setSendMsg({ text: "Something went wrong", ok: false });
     } finally {
-      setSendLoading(false);
+      setSendLoadingId(null);
     }
   };
 
-  // â”€â”€ Accept request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Accept incoming request
   const handleAccept = async (requestId: string) => {
     setAcceptLoading(requestId);
-
-    // Optimistic removal
     setPending((prev) => prev.filter((r) => r.id !== requestId));
 
     try {
@@ -152,12 +184,7 @@ export default function FriendsClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ requestId }),
       });
-      if (!res.ok) {
-        // Revert â€” just refresh so the real state is shown
-        startTransition(() => router.refresh());
-      } else {
-        startTransition(() => router.refresh());
-      }
+      startTransition(() => router.refresh());
     } catch {
       startTransition(() => router.refresh());
     } finally {
@@ -172,7 +199,7 @@ export default function FriendsClient({
         Add friends and compete on the weekly leaderboard.
       </p>
 
-      {/* â”€â”€ Find & Send Request â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Find & Send Request */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -181,18 +208,22 @@ export default function FriendsClient({
       >
         <h2 className="text-sm font-semibold text-stone-700">Find a Friend</h2>
         <p className="mt-0.5 text-xs text-stone-400">
-          Search by @username or email address
+          Start typing a name, @username, or email to find people
         </p>
 
-        {/* Search bar */}
-        <form onSubmit={handleSearch} className="mt-3 flex gap-2">
-          <div className="relative flex-1">
+        {/* Search bar with autocomplete */}
+        <div className="relative mt-3">
+          <div className="relative">
             <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
             <input
+              ref={inputRef}
               type="text"
               value={query}
-              onChange={(e) => { setQuery(e.target.value); setSearchError(""); }}
-              placeholder="@username or email"
+              onChange={(e) => handleInputChange(e.target.value)}
+              onFocus={() => {
+                if (suggestions.length > 0) setShowDropdown(true);
+              }}
+              placeholder="Search by name, @username, or email..."
               className="w-full rounded-2xl border border-stone-200 bg-stone-50 py-2.5 pl-9 pr-9 text-sm text-stone-800 placeholder:text-stone-400 transition focus:border-accent/50 focus:ring-2 focus:ring-accent/10 focus:outline-none"
             />
             {query && (
@@ -204,84 +235,89 @@ export default function FriendsClient({
                 <XMarkIcon className="h-4 w-4" />
               </button>
             )}
+            {searchLoading && (
+              <span className="absolute right-9 top-1/2 -translate-y-1/2">
+                <span className="block h-3.5 w-3.5 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              </span>
+            )}
           </div>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            type="submit"
-            disabled={searchLoading || query.trim().length < 2}
-            className="flex items-center gap-2 rounded-2xl bg-accent px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-accent-hover disabled:opacity-40"
-          >
-            <MagnifyingGlassIcon className="h-4 w-4" />
-            {searchLoading ? "Searchingâ€¦" : "Search"}
-          </motion.button>
-        </form>
 
-        {/* Search error */}
-        <AnimatePresence>
-          {searchError && (
-            <motion.p
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className="mt-2 text-xs text-red-500"
-            >
-              {searchError}
-            </motion.p>
+          {/* Autocomplete dropdown */}
+          <AnimatePresence>
+            {showDropdown && suggestions.length > 0 && (
+              <motion.div
+                ref={dropdownRef}
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.15 }}
+                className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-72 overflow-y-auto rounded-2xl border border-stone-200 bg-white shadow-lg"
+              >
+                {suggestions.map((user) => {
+                  const alreadySent = sentUsernames.has(user.id) || user.isPending;
+                  const isFriend = user.isFriend;
+
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex items-center justify-between gap-3 px-4 py-3 transition hover:bg-stone-50 first:rounded-t-2xl last:rounded-b-2xl"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Avatar user={user} size={36} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-stone-900 truncate">
+                            {user.name ?? user.username ?? "User"}
+                          </p>
+                          {user.username && (
+                            <p className="text-xs font-medium text-accent truncate">
+                              @{user.username}
+                            </p>
+                          )}
+                          {user.bio && (
+                            <p className="mt-0.5 text-xs text-stone-400 truncate">
+                              {user.bio}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action button */}
+                      <div className="flex-shrink-0">
+                        {isFriend ? (
+                          <span className="flex items-center gap-1 rounded-2xl bg-success-light px-3 py-1.5 text-xs font-medium text-success whitespace-nowrap">
+                            <CheckIcon className="h-3.5 w-3.5" /> Friends
+                          </span>
+                        ) : alreadySent ? (
+                          <span className="flex items-center gap-1 rounded-2xl bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-600 whitespace-nowrap">
+                            <CheckIcon className="h-3.5 w-3.5" /> Pending
+                          </span>
+                        ) : (
+                          <motion.button
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.96 }}
+                            onClick={() => handleSend(user)}
+                            disabled={sendLoadingId === user.id}
+                            className="flex items-center gap-1.5 rounded-2xl bg-accent px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:opacity-50 whitespace-nowrap"
+                          >
+                            <PaperAirplaneIcon className="h-3.5 w-3.5" />
+                            {sendLoadingId === user.id ? "Sending..." : "Add Friend"}
+                          </motion.button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* No results message */}
+          {!showDropdown && query.trim().length >= 1 && !searchLoading && suggestions.length === 0 && (
+            <p className="mt-2 text-xs text-stone-400">
+              No users found matching &quot;{query.trim()}&quot;
+            </p>
           )}
-        </AnimatePresence>
-
-        {/* Search result card */}
-        <AnimatePresence>
-          {searchResult && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 4 }}
-              transition={{ duration: 0.2 }}
-              className="mt-4 flex items-center justify-between rounded-2xl border border-accent/20 bg-accent-light/40 px-4 py-3"
-            >
-              <div className="flex items-center gap-3">
-                <Avatar user={searchResult} size={40} />
-                <div>
-                  <p className="text-sm font-semibold text-stone-900">
-                    {searchResult.name ?? searchResult.username ?? "User"}
-                  </p>
-                  {searchResult.username && (
-                    <p className="text-xs font-medium text-accent">
-                      @{searchResult.username}
-                    </p>
-                  )}
-                  {searchResult.bio && (
-                    <p className="mt-0.5 text-xs text-stone-400 line-clamp-1">
-                      {searchResult.bio}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Send button */}
-              {sentUsernames.has((searchResult.username ?? "").toLowerCase()) ? (
-                <span className="flex items-center gap-1 rounded-2xl bg-success-light px-3 py-1.5 text-xs font-medium text-success">
-                  <CheckIcon className="h-3.5 w-3.5" /> Sent
-                </span>
-              ) : (
-                <motion.button
-                  whileHover={{ scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() =>
-                    handleSend(searchResult.username ?? searchResult.name ?? "")
-                  }
-                  disabled={sendLoading}
-                  className="flex items-center gap-1.5 rounded-2xl bg-accent px-4 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:bg-accent-hover disabled:opacity-50"
-                >
-                  <PaperAirplaneIcon className="h-3.5 w-3.5" />
-                  {sendLoading ? "Sendingâ€¦" : "Send Request"}
-                </motion.button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        </div>
 
         {/* Send feedback */}
         <AnimatePresence>
@@ -298,7 +334,7 @@ export default function FriendsClient({
         </AnimatePresence>
       </motion.div>
 
-      {/* â”€â”€ Pending Incoming Requests â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Pending Incoming Requests */}
       <AnimatePresence>
         {pending.length > 0 && (
           <motion.div
@@ -358,7 +394,7 @@ export default function FriendsClient({
         )}
       </AnimatePresence>
 
-      {/* â”€â”€ Friends List â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* Friends List */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -372,7 +408,7 @@ export default function FriendsClient({
 
         {friends.length === 0 ? (
           <p className="mt-3 text-sm italic text-stone-400">
-            No friends yet â€” search for someone above to get started.
+            No friends yet — search for someone above to get started.
           </p>
         ) : (
           <div className="mt-3 grid gap-3 sm:grid-cols-2">

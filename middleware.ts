@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public and auth-related routes through
@@ -10,6 +10,7 @@ export async function proxy(req: NextRequest) {
     pathname.startsWith("/api/register") ||
     pathname.startsWith("/api/logout") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/health") ||
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
     pathname.startsWith("/_next") ||
@@ -33,5 +34,12 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/focus/:path*", "/friends/:path*", "/settings/:path*", "/profile/:path*", "/api/:path*"],
+  matcher: [
+    "/dashboard/:path*",
+    "/focus/:path*",
+    "/friends/:path*",
+    "/settings/:path*",
+    "/profile/:path*",
+    "/api/:path*",
+  ],
 };

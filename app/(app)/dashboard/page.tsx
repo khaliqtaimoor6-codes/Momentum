@@ -13,7 +13,13 @@ export const metadata = {
 };
 
 export default async function DashboardPage() {
-  const session = await getServerSession(authOptions);
+  let session;
+  try {
+    session = await getServerSession(authOptions);
+  } catch (err) {
+    console.error("Dashboard: getServerSession failed", err);
+    redirect("/login");
+  }
 
   if (!session) {
     redirect("/login");
@@ -25,6 +31,8 @@ export default async function DashboardPage() {
   if (!userId) {
     redirect("/login");
   }
+
+  try {
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -130,4 +138,23 @@ export default async function DashboardPage() {
       tasks={tasks}
     />
   );
+  } catch (err) {
+    console.error("Dashboard data fetch error:", err);
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#f8f6f1] px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-md text-center">
+          <h1 className="text-xl font-bold text-stone-900">Something went wrong</h1>
+          <p className="mt-2 text-sm text-stone-500">
+            Could not load dashboard data. This usually means the database is unreachable.
+          </p>
+          <p className="mt-4 text-xs text-stone-400 font-mono break-all">
+            {err instanceof Error ? err.message : "Unknown error"}
+          </p>
+          <a href="/login" className="mt-6 inline-block rounded-xl bg-accent px-6 py-2.5 text-sm font-medium text-white hover:bg-accent-hover transition">
+            Back to Login
+          </a>
+        </div>
+      </div>
+    );
+  }
 }
