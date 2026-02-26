@@ -1,15 +1,19 @@
 "use client";
 
 import { useTheme } from "@/context/ThemeContext";
+import { useNotifications } from "@/hooks/useNotifications";
 import PageWrapper from "@/components/PageWrapper";
 import { motion } from "framer-motion";
 import {
   SunIcon,
   MoonIcon,
+  BellIcon,
+  BellSlashIcon,
 } from "@heroicons/react/24/outline";
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme();
+  const { permission, requestPermission } = useNotifications();
   const isDark = theme === "dark";
 
   return (
@@ -108,7 +112,7 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
-      {/* More settings placeholder */}
+      {/* Notifications */}
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -116,7 +120,62 @@ export default function SettingsPage() {
         className="mt-4 rounded-2xl bg-card border border-card-border p-6 shadow-md"
       >
         <h2 className="text-sm font-semibold text-foreground">Notifications</h2>
-        <p className="mt-0.5 text-xs text-muted">Coming soon — timer alerts, friend activity, and more.</p>
+        <p className="mt-0.5 text-xs text-muted">
+          Get smart reminders for your timetable, focus sessions, and streaks.
+        </p>
+
+        <div className="mt-5 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {permission === "granted" ? (
+              <BellIcon className="h-5 w-5 text-success" />
+            ) : (
+              <BellSlashIcon className="h-5 w-5 text-muted-light" />
+            )}
+            <div>
+              <p className="text-sm font-medium text-foreground">
+                Browser Notifications
+              </p>
+              <p className="text-xs text-muted">
+                {permission === "granted"
+                  ? "Enabled — you'll get timetable reminders and focus nudges"
+                  : permission === "denied"
+                    ? "Blocked — enable in browser settings to receive alerts"
+                    : "Allow notifications to get smart reminders"}
+              </p>
+            </div>
+          </div>
+
+          {permission === "default" && (
+            <button
+              onClick={requestPermission}
+              className="rounded-xl bg-accent px-4 py-2 text-xs font-semibold text-white transition hover:bg-accent-hover"
+            >
+              Enable
+            </button>
+          )}
+          {permission === "granted" && (
+            <span className="rounded-full bg-success-light px-3 py-1 text-xs font-semibold text-success">
+              Active
+            </span>
+          )}
+          {permission === "denied" && (
+            <span className="rounded-full bg-danger-light px-3 py-1 text-xs font-semibold text-danger">
+              Blocked
+            </span>
+          )}
+        </div>
+
+        {permission === "granted" && (
+          <div className="mt-4 rounded-xl bg-surface p-4">
+            <p className="text-xs font-semibold text-foreground mb-2">Active Smart Notifications:</p>
+            <ul className="space-y-1.5 text-xs text-muted">
+              <li>📅 <span className="text-foreground font-medium">Timetable reminders</span> — 10 min before each planned activity</li>
+              <li>🔥 <span className="text-foreground font-medium">Focus nudge</span> — if you haven&apos;t focused by 2 PM</li>
+              <li>⏳ <span className="text-foreground font-medium">Streak warning</span> — reminder at 6 PM to keep your streak</li>
+              <li>🎉 <span className="text-foreground font-medium">Timer alerts</span> — when focus sessions or tasks complete</li>
+            </ul>
+          </div>
+        )}
       </motion.div>
     </PageWrapper>
   );

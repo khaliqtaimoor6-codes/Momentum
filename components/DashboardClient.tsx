@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageWrapper from "@/components/PageWrapper";
 import StatsCard from "@/components/StatsCard";
 import Leaderboard, { LeaderboardEntry } from "@/components/Leaderboard";
 import TaskList, { type Task } from "@/components/TaskList";
+import WeeklyResetCelebration from "@/components/WeeklyResetCelebration";
 import { motion } from "framer-motion";
 import {
   CheckCircleIcon,
@@ -36,8 +38,25 @@ export default function DashboardClient({
       ? Math.round((totalTasksCompleted / totalPlannedTasks) * 100)
       : 0;
 
+  // Fetch last week recap for celebration
+  const [lastWeekData, setLastWeekData] = useState<{
+    winner: { name: string; tasksCompleted: number; focusMinutes: number; isCurrentUser: boolean } | null;
+    yourStats: { tasksCompleted: number; focusMinutes: number };
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/weekly-recap")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setLastWeekData({ winner: data.winner, yourStats: data.yourStats });
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <PageWrapper>
+      {/* Weekly Reset Celebration */}
+      <WeeklyResetCelebration lastWeekData={lastWeekData} />
       {/* Top Row */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Welcome Card */}

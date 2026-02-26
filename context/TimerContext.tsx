@@ -151,14 +151,27 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     setIsActive(false);
     endTimeRef.current = null;
     
-    // Play notification sound
+    // Play notification sound & browser notification
+    try {
+        const audio = new Audio('/sounds/bell.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(() => {});
+    } catch {}
     try {
         if ("Notification" in window && Notification.permission === "granted") {
-            new Notification(mode === 'focus' ? "Focus session complete!" : "Timer complete!");
+            const title = mode === 'focus' 
+              ? "🎉 Focus session complete!" 
+              : mode === 'miniTask' && miniTask 
+                ? `✅ Mini task "${miniTask.title}" done!`
+                : "⏰ Timer complete!";
+            const body = mode === 'focus'
+              ? `Great job! You completed ${PHASES.focus.minutes} minutes of focused work.`
+              : mode === 'miniTask' && miniTask
+                ? `You finished "${miniTask.title}" in ${miniTask.duration} minutes.`
+                : "Time to take a break!";
+            new Notification(title, { body, icon: '/favicon.ico' });
         }
-        const audio = new Audio('/sounds/bell.mp3'); 
-        audio.play().catch(() => {});
-    } catch (e) {}
+    } catch {}
 
     // Update stats
     let minutesToAdd = 0;
