@@ -4,6 +4,12 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/lib/prisma";
 import { compare } from "bcryptjs";
 
+// Vercel-friendly fallback: NextAuth expects NEXTAUTH_URL in production.
+// Vercel provides VERCEL_URL without protocol (e.g. "my-app.vercel.app").
+if (!process.env.NEXTAUTH_URL && process.env.VERCEL_URL) {
+  process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`;
+}
+
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
