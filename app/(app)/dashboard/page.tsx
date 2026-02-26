@@ -143,7 +143,7 @@ export default async function DashboardPage() {
   } catch (err) {
     console.error("Dashboard data fetch error:", err);
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#f8f6f1] px-4">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-md text-center">
           <h1 className="text-xl font-bold text-stone-900">Something went wrong</h1>
           <p className="mt-2 text-sm text-stone-500">

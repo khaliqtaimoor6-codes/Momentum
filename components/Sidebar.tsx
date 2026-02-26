@@ -57,7 +57,7 @@ export default function Sidebar() {
               className={`flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-medium transition-all duration-200 ${
                 active
                   ? "bg-accent-light text-accent-dark shadow-sm"
-                  : "text-stone-500 hover:bg-[#f0f4fa] hover:text-accent-dark"
+                  : "text-muted hover:bg-accent-light/50 hover:text-accent-dark"
               }`}
             >
               <Icon className={`h-5 w-5 shrink-0 ${active ? "text-accent" : ""}`} />
@@ -79,7 +79,7 @@ export default function Sidebar() {
       >
         <button
           onClick={handleLogout}
-          className="mt-4 flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-medium text-stone-400 transition-all duration-200 hover:bg-danger-light hover:text-danger"
+          className="mt-4 flex w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-medium text-muted-light transition-all duration-200 hover:bg-danger-light hover:text-danger"
         >
           <ArrowRightOnRectangleIcon className="h-5 w-5 shrink-0" />
           Logout
@@ -92,7 +92,7 @@ export default function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30">
-        <div className="flex grow flex-col gap-6 border-r border-stone-100 bg-white/90 px-5 py-8 backdrop-blur-md">
+        <div className="flex grow flex-col gap-6 border-r border-sidebar-border bg-sidebar-bg px-5 py-8 backdrop-blur-md">
           <Link href="/dashboard" className="px-2">
             <motion.div
               initial={{ opacity: 0, y: -8 }}
@@ -113,7 +113,7 @@ export default function Sidebar() {
       <div className="fixed left-4 top-4 z-50 lg:hidden">
         <button
           onClick={() => setMobileOpen(true)}
-          className="rounded-2xl bg-white/90 p-2 shadow-md backdrop-blur-sm transition hover:shadow-lg hover:bg-accent-light"
+          className="rounded-2xl bg-card p-2 shadow-md backdrop-blur-sm transition hover:shadow-lg hover:bg-accent-light"
         >
           <Bars3Icon className="h-6 w-6 text-accent-dark" />
         </button>
@@ -131,7 +131,7 @@ export default function Sidebar() {
               onClick={() => setMobileOpen(false)}
             />
             <motion.aside
-              className="fixed inset-y-0 left-0 z-50 w-64 bg-white/95 px-5 py-8 shadow-2xl backdrop-blur-md lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 w-64 bg-sidebar-bg px-5 py-8 shadow-2xl backdrop-blur-md lg:hidden"
               initial={{ x: -264 }}
               animate={{ x: 0 }}
               exit={{ x: -264 }}
